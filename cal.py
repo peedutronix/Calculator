@@ -21,7 +21,6 @@ EXCHANGE_RATES = {
     "JPY": {"USD": 0.0091, "EUR": 0.0077, "GBP": 0.0068}
 }
 
-
 # Safe eval environment
 SAFE_ENV = {
     "sqrt": math.sqrt,
@@ -46,7 +45,7 @@ class CalculatorGUI:
         self.result_var = tk.StringVar()
         self.expression_var.set("")
         self.result_var.set("0")
-        self.angle_mode = "deg"
+        self.dark_mode = True
         self.history = []
 
         # Notebook (tabs)
@@ -66,52 +65,79 @@ class CalculatorGUI:
         self.notebook.add(self.history_frame, text="History")
 
         # Create UIs
-        self.create_general_math_ui(self.general_math_frame)
-        self.create_scientific_ui(self.scientific_frame)
+        self.create_modern_ui(self.general_math_frame, mode="general")
+        self.create_modern_ui(self.scientific_frame, mode="scientific")
         self.create_measurement_conversion_ui(self.measurement_frame)
         self.create_price_conversion_ui(self.price_frame)
         self.create_history_ui(self.history_frame)
 
-        # Dark/Light mode toggle
+        # Menu
         menu = tk.Menu(master)
         master.config(menu=menu)
         view_menu = tk.Menu(menu, tearoff=0)
         menu.add_cascade(label="View", menu=view_menu)
         view_menu.add_command(label="Toggle Dark Mode", command=self.toggle_theme)
 
-        self.dark_mode = False
+    # ------------------ Unified Modern UI ------------------
+    def create_modern_ui(self, frame, mode="general"):
+        # Display
+        display_frame = tk.Frame(frame, bg=self.get_bg())
+        display_frame.grid(row=0, column=0, columnspan=5, sticky="nsew", padx=5, pady=5)
 
-    # ------------------ General Math ------------------
-    def create_general_math_ui(self, frame):
-        display_frame = tk.Frame(frame, bg="#F0F0F0")
-        display_frame.grid(row=0, column=0, columnspan=4, sticky="nsew", padx=5, pady=5)
+        self.exp_label = tk.Label(display_frame, textvariable=self.expression_var,
+                                  anchor="e", font=('Arial', 18), bg=self.get_bg(), fg="#888")
+        self.exp_label.pack(expand=True, fill="both")
 
-        self.expression_label = tk.Label(display_frame, textvariable=self.expression_var,
-                                         anchor="e", font=('Arial', 16), bg="#F0F0F0", fg="#555")
-        self.expression_label.pack(expand=True, fill="both")
+        self.res_label = tk.Label(display_frame, textvariable=self.result_var,
+                                  anchor="e", font=('Arial', 28, 'bold'), bg=self.get_bg(), fg="#fff")
+        self.res_label.pack(expand=True, fill="both")
 
-        self.result_label = tk.Label(display_frame, textvariable=self.result_var,
-                                     anchor="e", font=('Arial', 24, 'bold'), bg="#F0F0F0", fg="#000")
-        self.result_label.pack(expand=True, fill="both")
-
-        buttons = [
-            ['Ac', '+/-', '%', '/'],
-            ['7', '8', '9', '*'],
-            ['4', '5', '6', '-'],
-            ['1', '2', '3', '+'],
-            ['0', '.', '=', 'Copy']
-        ]
+        # Buttons layout
+        if mode == "general":
+            buttons = [
+                ['Ac', '+/-', '%', '/'],
+                ['7', '8', '9', '*'],
+                ['4', '5', '6', '-'],
+                ['1', '2', '3', '+'],
+                ['0', '.', '=', 'Copy']
+            ]
+        else:  # scientific
+            buttons = [
+                ['Ac', '(', ')', '^', 'sqrt'],
+                ['7', '8', '9', '/', 'sin'],
+                ['4', '5', '6', '*', 'cos'],
+                ['1', '2', '3', '-', 'tan'],
+                ['0', '.', 'pi', '+', '=']
+            ]
 
         for r, row in enumerate(buttons, 1):
             for c, text in enumerate(row):
-                ttk.Button(frame, text=text, command=lambda b=text: self.button_click(b)).grid(
-                    row=r, column=c, sticky="nsew", padx=2, pady=2)
+                btn = tk.Button(frame, text=text, font=('Arial', 16, 'bold'),
+                                bg=self.get_btn_bg(text), fg="white",
+                                relief="flat", bd=0,
+                                activebackground="#2196F3", activeforeground="white",
+                                command=lambda b=text: self.button_click(b))
+                btn.grid(row=r, column=c, sticky="nsew", padx=2, pady=2, ipadx=5, ipady=15)
 
         for i in range(6):
             frame.grid_rowconfigure(i, weight=1)
-        for i in range(4):
+        for i in range(len(buttons[0])):
             frame.grid_columnconfigure(i, weight=1)
 
+    def get_btn_bg(self, text):
+        if text in ["+", "-", "*", "/", "^", "sqrt", "="]:
+            return "#1976D2"  # Blue for operators
+        elif text in ["Ac", "Copy"]:
+            return "#D32F2F"  # Red for special
+        elif text in ["sin", "cos", "tan", "pi", "%", "(", ")"]:
+            return "#555"  # Grey for scientific
+        else:
+            return "#333"  # Digits dark grey
+
+    def get_bg(self):
+        return "#111" if self.dark_mode else "#F0F0F0"
+
+    # ------------------ Button Logic ------------------
     def button_click(self, value):
         if value == "Ac":
             self.expression_var.set("")
@@ -138,27 +164,6 @@ class CalculatorGUI:
             messagebox.showinfo("Copied", "Result copied to clipboard")
         else:
             self.expression_var.set(self.expression_var.get() + str(value))
-
-    # ------------------ Scientific ------------------
-    def create_scientific_ui(self, frame):
-        sci_buttons = [
-            ['sin', 'cos', 'tan', 'sqrt', '^'],
-            ['pi', 'deg', 'rad', '(', ')']
-        ]
-
-        for r, row in enumerate(sci_buttons):
-            for c, text in enumerate(row):
-                ttk.Button(frame, text=text, command=lambda b=text: self.button_click(b)).grid(
-                    row=r, column=c, sticky="nsew", padx=2, pady=2)
-
-        for i in range(3):
-            frame.grid_rowconfigure(i, weight=1)
-        for i in range(5):
-            frame.grid_columnconfigure(i, weight=1)
-
-    def toggle_angle_mode(self, mode):
-        self.angle_mode = mode
-        self.result_var.set(f"Mode: {mode}")
 
     # ------------------ Measurement Conversion ------------------
     def create_measurement_conversion_ui(self, frame):
@@ -231,17 +236,13 @@ class CalculatorGUI:
 
     def update_history(self):
         self.history_listbox.delete(0, tk.END)
-        for item in self.history[-20:]:  # last 20
+        for item in self.history[-20:]:
             self.history_listbox.insert(tk.END, item)
 
     # ------------------ Theme ------------------
     def toggle_theme(self):
-        if self.dark_mode:
-            self.master.configure(bg="#F0F0F0")
-            self.dark_mode = False
-        else:
-            self.master.configure(bg="#222")
-            self.dark_mode = True
+        self.dark_mode = not self.dark_mode
+        self.master.configure(bg=self.get_bg())
 
 
 if __name__ == "__main__":
