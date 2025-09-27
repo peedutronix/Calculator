@@ -99,11 +99,18 @@ class CalculatorGUI:
         self.create_measurement_conversion_ui(self.measurement_frame)
         self.create_price_conversion_ui(self.price_frame)
 
-        self.display_frame = tk.Frame(self.general_math_frame, bd=20, pady=2, bg="#CCCCCC", relief="ridge")
-        self.display_frame.pack(side="top", fill="both", expand=True)
+        # Configure styles for a modern look
+        style = ttk.Style()
+        style.theme_use('clam') # Use a modern theme
+        style.configure('TButton', font=('Arial', 14), padding=10)
+        style.configure('TLabel', font=('Arial', 12))
+        style.configure('TEntry', font=('Arial', 14), padding=5)
+        style.configure('TCombobox', font=('Arial', 12), padding=5)
+        style.configure('TNotebook.Tab', font=('Arial', 12, 'bold'), padding=[10, 5])
 
-        self.display = tk.Entry(self.display_frame, textvariable=self.equation, font=('Arial', 24), bd=0, justify='right', bg="#CCCCCC")
-        self.display.pack(expand=True, fill="both")
+        # Display for General Math and Scientific sections
+        self.display = tk.Entry(self.general_math_frame, textvariable=self.equation, font=('Arial', 24), bd=0, justify='right', bg="#CCCCCC")
+        self.display.grid(row=0, column=0, columnspan=4, sticky="nsew")
 
     def button_click(self, char):
         if char == '=':
@@ -151,28 +158,42 @@ class CalculatorGUI:
             '1', '2', '3', '-',
             'C', '0', '=', '+'
         ]
-        row_val = 0
+        row_val = 1 # Start from row 1 to leave space for display
         col_val = 0
         for button in buttons:
-            tk.Button(frame, text=button, padx=20, pady=20, font=('Arial', 18), command=lambda b=button: self.button_click(b)).grid(row=row_val, column=col_val)
+            ttk.Button(frame, text=button, command=lambda b=button: self.button_click(b)).grid(row=row_val, column=col_val, sticky="nsew", padx=1, pady=1)
             col_val += 1
             if col_val > 3:
                 col_val = 0
                 row_val += 1
+        frame.grid_rowconfigure(0, weight=1)
+        for i in range(1, row_val + 1):
+            frame.grid_rowconfigure(i, weight=1)
+        for i in range(4):
+            frame.grid_columnconfigure(i, weight=1)
 
     def create_scientific_buttons(self, frame):
         scientific_buttons = [
             'sqrt', '^', 'sin', 'cos',
-            'tan'
+            'tan', 'C', '='
         ]
-        row_val = 0
+        row_val = 1 # Start from row 1 to leave space for display
         col_val = 0
         for button in scientific_buttons:
-            tk.Button(frame, text=button, padx=20, pady=20, font=('Arial', 18), command=lambda b=button: self.button_click(b)).grid(row=row_val, column=col_val)
+            ttk.Button(frame, text=button, command=lambda b=button: self.button_click(b)).grid(row=row_val, column=col_val, sticky="nsew", padx=1, pady=1)
             col_val += 1
             if col_val > 3:
                 col_val = 0
                 row_val += 1
+        frame.grid_rowconfigure(0, weight=1)
+        for i in range(1, row_val + 1):
+            frame.grid_rowconfigure(i, weight=1)
+        for i in range(4):
+            frame.grid_columnconfigure(i, weight=1)
+
+        # Add a display for the scientific section
+        self.scientific_display = tk.Entry(self.scientific_frame, textvariable=self.equation, font=('Arial', 24), bd=0, justify='right', bg="#CCCCCC")
+        self.scientific_display.grid(row=0, column=0, columnspan=4, sticky="nsew")
 
     def create_measurement_conversion_ui(self, frame):
         self.measurement_input = tk.StringVar()
