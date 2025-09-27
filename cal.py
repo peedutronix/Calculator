@@ -1,6 +1,6 @@
 import math
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 
 
 # Conversion factors for measurement conversion
@@ -13,7 +13,7 @@ CONVERSION_FACTORS = {
     "fahrenheit": {"celsius": lambda f: (f - 32) * 5/9}
 }
 
-# Exchange rates for price conversion (example rates, not real-time)
+# Exchange rates (demo, not real-time)
 EXCHANGE_RATES = {
     "USD": {"EUR": 0.85, "GBP": 0.75, "JPY": 110.00},
     "EUR": {"USD": 1.18, "GBP": 0.88, "JPY": 129.40},
@@ -22,97 +22,90 @@ EXCHANGE_RATES = {
 }
 
 
+# Safe eval environment
+SAFE_ENV = {
+    "sqrt": math.sqrt,
+    "pow": math.pow,
+    "pi": math.pi,
+    "sin": lambda x: math.sin(math.radians(x)),
+    "cos": lambda x: math.cos(math.radians(x)),
+    "tan": lambda x: math.tan(math.radians(x)),
+    "__builtins__": {}
+}
+
+
 class CalculatorGUI:
     def __init__(self, master):
         self.master = master
-        master.title("Calculator")
-        master.geometry("400x600")
+        master.title("Advanced Calculator")
+        master.geometry("420x650")
         master.resizable(False, False)
-        master.configure(bg="#F0F0F0")
 
+        # Variables
         self.expression_var = tk.StringVar()
         self.result_var = tk.StringVar()
-        self.expression_var.set('')
-        self.result_var.set('0')
-        self.angle_mode = "deg"  # default to degrees
+        self.expression_var.set("")
+        self.result_var.set("0")
+        self.angle_mode = "deg"
+        self.history = []
 
+        # Notebook (tabs)
         self.notebook = ttk.Notebook(master)
         self.notebook.pack(expand=True, fill="both", padx=10, pady=10)
 
-        self.general_math_frame = ttk.Frame(self.notebook, style='TFrame')
-        self.scientific_frame = ttk.Frame(self.notebook, style='TFrame')
-        self.measurement_frame = ttk.Frame(self.notebook, style='TFrame')
-        self.price_frame = ttk.Frame(self.notebook, style='TFrame')
+        self.general_math_frame = ttk.Frame(self.notebook)
+        self.scientific_frame = ttk.Frame(self.notebook)
+        self.measurement_frame = ttk.Frame(self.notebook)
+        self.price_frame = ttk.Frame(self.notebook)
+        self.history_frame = ttk.Frame(self.notebook)
 
-        self.notebook.add(self.general_math_frame, text="General Math")
+        self.notebook.add(self.general_math_frame, text="General")
         self.notebook.add(self.scientific_frame, text="Scientific")
         self.notebook.add(self.measurement_frame, text="Measurement")
-        self.notebook.add(self.price_frame, text="Price")
+        self.notebook.add(self.price_frame, text="Currency")
+        self.notebook.add(self.history_frame, text="History")
 
-        # Configure styles
-        style = ttk.Style()
-        style.theme_use('clam')
-        style.configure('TFrame', background='#F0F0F0')
-        style.configure('TButton', font=('Arial', 16), padding=10, relief="flat", background="#E0E0E0", foreground="#333333")
-        style.map('TButton', background=[('active', '#D0D0D0')])
-
-        style.configure('Operator.TButton', background="#ADD8E6", foreground="#FFFFFF")
-        style.map('Operator.TButton', background=[('active', '#87CEEB')])
-
-        style.configure('Equals.TButton', background="#4682B4", foreground="#FFFFFF")
-        style.map('Equals.TButton', background=[('active', '#5F9EA0')])
-
-        style.configure('Clear.TButton', background="#FF6347", foreground="#FFFFFF")
-        style.map('Clear.TButton', background=[('active', '#FF4500')])
-
-        style.configure('Scientific.TButton', background="#D3D3D3", foreground="#333333")
-        style.map('Scientific.TButton', background=[('active', '#C0C0C0')])
-
+        # Create UIs
         self.create_general_math_ui(self.general_math_frame)
         self.create_scientific_ui(self.scientific_frame)
         self.create_measurement_conversion_ui(self.measurement_frame)
         self.create_price_conversion_ui(self.price_frame)
+        self.create_history_ui(self.history_frame)
+
+        # Dark/Light mode toggle
+        menu = tk.Menu(master)
+        master.config(menu=menu)
+        view_menu = tk.Menu(menu, tearoff=0)
+        menu.add_cascade(label="View", menu=view_menu)
+        view_menu.add_command(label="Toggle Dark Mode", command=self.toggle_theme)
+
+        self.dark_mode = False
 
     # ------------------ General Math ------------------
     def create_general_math_ui(self, frame):
         display_frame = tk.Frame(frame, bg="#F0F0F0")
         display_frame.grid(row=0, column=0, columnspan=4, sticky="nsew", padx=5, pady=5)
 
-        self.expression_label = tk.Label(display_frame, textvariable=self.expression_var, anchor="e", font=('Arial', 16), bg="#F0F0F0", fg="#888888")
+        self.expression_label = tk.Label(display_frame, textvariable=self.expression_var,
+                                         anchor="e", font=('Arial', 16), bg="#F0F0F0", fg="#555")
         self.expression_label.pack(expand=True, fill="both")
 
-        self.result_label = tk.Label(display_frame, textvariable=self.result_var, anchor="e", font=('Arial', 24, 'bold'), bg="#F0F0F0", fg="#333333")
+        self.result_label = tk.Label(display_frame, textvariable=self.result_var,
+                                     anchor="e", font=('Arial', 24, 'bold'), bg="#F0F0F0", fg="#000")
         self.result_label.pack(expand=True, fill="both")
 
         buttons = [
-            {'text': 'Ac', 'style': 'Clear.TButton', 'col': 0, 'row': 1},
-            {'text': '+/-', 'style': 'Scientific.TButton', 'col': 1, 'row': 1},
-            {'text': '%', 'style': 'Scientific.TButton', 'col': 2, 'row': 1},
-            {'text': '/', 'style': 'Operator.TButton', 'col': 3, 'row': 1},
-            {'text': '7', 'style': 'TButton', 'col': 0, 'row': 2},
-            {'text': '8', 'style': 'TButton', 'col': 1, 'row': 2},
-            {'text': '9', 'style': 'TButton', 'col': 2, 'row': 2},
-            {'text': '*', 'style': 'Operator.TButton', 'col': 3, 'row': 2},
-            {'text': '4', 'style': 'TButton', 'col': 0, 'row': 3},
-            {'text': '5', 'style': 'TButton', 'col': 1, 'row': 3},
-            {'text': '6', 'style': 'TButton', 'col': 2, 'row': 3},
-            {'text': '-', 'style': 'Operator.TButton', 'col': 3, 'row': 3},
-            {'text': '1', 'style': 'TButton', 'col': 0, 'row': 4},
-            {'text': '2', 'style': 'TButton', 'col': 1, 'row': 4},
-            {'text': '3', 'style': 'TButton', 'col': 2, 'row': 4},
-            {'text': '+', 'style': 'Operator.TButton', 'col': 3, 'row': 4},
-            {'text': '0', 'style': 'TButton', 'col': 0, 'row': 5, 'columnspan': 2},
-            {'text': '.', 'style': 'TButton', 'col': 2, 'row': 5},
-            {'text': '=', 'style': 'Equals.TButton', 'col': 3, 'row': 5}
+            ['Ac', '+/-', '%', '/'],
+            ['7', '8', '9', '*'],
+            ['4', '5', '6', '-'],
+            ['1', '2', '3', '+'],
+            ['0', '.', '=', 'Copy']
         ]
 
-        for button_data in buttons:
-            text = button_data['text']
-            style_name = button_data['style']
-            col = button_data['col']
-            row = button_data['row']
-            columnspan = button_data.get('columnspan', 1)
-            ttk.Button(frame, text=text, style=style_name, command=lambda b=text: self.button_click(b)).grid(row=row, column=col, columnspan=columnspan, sticky="nsew", padx=1, pady=1)
+        for r, row in enumerate(buttons, 1):
+            for c, text in enumerate(row):
+                ttk.Button(frame, text=text, command=lambda b=text: self.button_click(b)).grid(
+                    row=r, column=c, sticky="nsew", padx=2, pady=2)
 
         for i in range(6):
             frame.grid_rowconfigure(i, weight=1)
@@ -125,57 +118,38 @@ class CalculatorGUI:
             self.result_var.set("0")
         elif value == "=":
             try:
-                result = eval(self.expression_var.get())
+                expr = self.expression_var.get()
+                result = eval(expr, SAFE_ENV)
                 self.result_var.set(str(result))
                 self.expression_var.set(str(result))
+                self.history.append(f"{expr} = {result}")
+                self.update_history()
             except Exception:
                 self.result_var.set("Error")
         elif value == "+/-":
-            try:
-                current = self.expression_var.get()
-                if current.startswith("-"):
-                    self.expression_var.set(current[1:])
-                else:
-                    self.expression_var.set("-" + current)
-            except Exception:
-                self.result_var.set("Error")
-        else:
             current = self.expression_var.get()
-            self.expression_var.set(current + str(value))
+            if current.startswith("-"):
+                self.expression_var.set(current[1:])
+            else:
+                self.expression_var.set("-" + current)
+        elif value == "Copy":
+            self.master.clipboard_clear()
+            self.master.clipboard_append(self.result_var.get())
+            messagebox.showinfo("Copied", "Result copied to clipboard")
+        else:
+            self.expression_var.set(self.expression_var.get() + str(value))
 
     # ------------------ Scientific ------------------
     def create_scientific_ui(self, frame):
-        display_frame = tk.Frame(frame, bg="#F0F0F0")
-        display_frame.grid(row=0, column=0, columnspan=5, sticky="nsew", padx=5, pady=5)
-
-        self.scientific_expression_label = tk.Label(display_frame, textvariable=self.expression_var, anchor="e", font=('Arial', 16), bg="#F0F0F0", fg="#888888")
-        self.scientific_expression_label.pack(expand=True, fill="both")
-
-        self.scientific_result_label = tk.Label(display_frame, textvariable=self.result_var, anchor="e", font=('Arial', 24, 'bold'), bg="#F0F0F0", fg="#333333")
-        self.scientific_result_label.pack(expand=True, fill="both")
-
-        scientific_buttons_data = [
-            {'text': 'sin', 'style': 'Scientific.TButton', 'col': 0, 'row': 1},
-            {'text': 'cos', 'style': 'Scientific.TButton', 'col': 1, 'row': 1},
-            {'text': 'tan', 'style': 'Scientific.TButton', 'col': 2, 'row': 1},
-            {'text': 'sqrt', 'style': 'Scientific.TButton', 'col': 3, 'row': 1},
-            {'text': '^', 'style': 'Scientific.TButton', 'col': 4, 'row': 1},
-            {'text': 'pi', 'style': 'Scientific.TButton', 'col': 0, 'row': 2},
-            {'text': 'deg', 'style': 'Scientific.TButton', 'col': 1, 'row': 2},
-            {'text': 'rad', 'style': 'Scientific.TButton', 'col': 2, 'row': 2}
+        sci_buttons = [
+            ['sin', 'cos', 'tan', 'sqrt', '^'],
+            ['pi', 'deg', 'rad', '(', ')']
         ]
 
-        for button_data in scientific_buttons_data:
-            text = button_data['text']
-            style_name = button_data['style']
-            col = button_data['col']
-            row = button_data['row']
-            columnspan = button_data.get('columnspan', 1)
-
-            if text in ['deg', 'rad']:
-                ttk.Button(frame, text=text, style=style_name, command=lambda m=text: self.toggle_angle_mode(m)).grid(row=row, column=col, columnspan=columnspan, sticky="nsew", padx=1, pady=1)
-            else:
-                ttk.Button(frame, text=text, style=style_name, command=lambda b=text: self.button_click(b)).grid(row=row, column=col, columnspan=columnspan, sticky="nsew", padx=1, pady=1)
+        for r, row in enumerate(sci_buttons):
+            for c, text in enumerate(row):
+                ttk.Button(frame, text=text, command=lambda b=text: self.button_click(b)).grid(
+                    row=r, column=c, sticky="nsew", padx=2, pady=2)
 
         for i in range(3):
             frame.grid_rowconfigure(i, weight=1)
@@ -218,7 +192,7 @@ class CalculatorGUI:
         except Exception:
             self.measurement_result.config(text="Invalid Input")
 
-    # ------------------ Price Conversion ------------------
+    # ------------------ Currency Conversion ------------------
     def create_price_conversion_ui(self, frame):
         self.price_input_var = tk.StringVar()
         self.from_currency = tk.StringVar(value="USD")
@@ -249,6 +223,25 @@ class CalculatorGUI:
             self.price_result.config(text=f"{converted_amount}")
         except Exception:
             self.price_result.config(text="Invalid Input")
+
+    # ------------------ History ------------------
+    def create_history_ui(self, frame):
+        self.history_listbox = tk.Listbox(frame, font=('Arial', 12))
+        self.history_listbox.pack(expand=True, fill="both", padx=5, pady=5)
+
+    def update_history(self):
+        self.history_listbox.delete(0, tk.END)
+        for item in self.history[-20:]:  # last 20
+            self.history_listbox.insert(tk.END, item)
+
+    # ------------------ Theme ------------------
+    def toggle_theme(self):
+        if self.dark_mode:
+            self.master.configure(bg="#F0F0F0")
+            self.dark_mode = False
+        else:
+            self.master.configure(bg="#222")
+            self.dark_mode = True
 
 
 if __name__ == "__main__":
