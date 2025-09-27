@@ -1,74 +1,25 @@
 import math
 import tkinter as tk
-from tkinter import messagebox
 from tkinter import ttk
 
-def add(x, y):
-    return x + y
 
-def subtract(x, y):
-    return x - y
-
-def multiply(x, y):
-    return x * y
-
-def divide(x, y):
-    if y == 0:
-        return "Error! Division by zero."
-    else:
-        return x / y
-
-def power(x, y):
-    return math.pow(x, y)
-
-def square_root(x):
-    if x < 0:
-        return "Error! Cannot calculate square root of a negative number."
-    return math.sqrt(x)
-
-def sin_val(x):
-    return math.sin(math.radians(x)) # Convert degrees to radians
-
-def cos_val(x):
-    return math.cos(math.radians(x)) # Convert degrees to radians
-
-def tan_val(x):
-    if math.cos(math.radians(x)) == 0:
-        return "Error! Tangent is undefined."
-    return math.tan(math.radians(x)) # Convert degrees to radians
-
-def meters_to_feet(m):
-    return m * 3.28084
-
-def feet_to_meters(ft):
-    return ft / 3.28084
-
-def kilograms_to_pounds(kg):
-    return kg * 2.20462
-
-def pounds_to_kilograms(lb):
-    return lb / 2.20462
-
-def celsius_to_fahrenheit(c):
-    return (c * 9/5) + 32
-
-def fahrenheit_to_celsius(f):
-    return (f - 32) * 5/9
-
-# Placeholder for currency exchange rates (for demonstration purposes)
-EXCHANGE_RATES = {
-    "USD_to_EUR": 0.85,
-    "EUR_to_USD": 1.18,
-    "USD_to_GBP": 0.73,
-    "GBP_to_USD": 1.37,
+# Conversion factors for measurement conversion
+CONVERSION_FACTORS = {
+    "meters": {"feet": 3.28084},
+    "feet": {"meters": 0.3048},
+    "kilograms": {"pounds": 2.20462},
+    "pounds": {"kilograms": 0.453592},
+    "celsius": {"fahrenheit": lambda c: (c * 9/5) + 32},
+    "fahrenheit": {"celsius": lambda f: (f - 32) * 5/9}
 }
 
-def convert_currency(amount, from_currency, to_currency):
-    key = f"{from_currency}_to_{to_currency}"
-    if key in EXCHANGE_RATES:
-        return amount * EXCHANGE_RATES[key]
-    else:
-        raise ValueError("Unsupported currency conversion.")
+# Exchange rates for price conversion (example rates, not real-time)
+EXCHANGE_RATES = {
+    "USD": {"EUR": 0.85, "GBP": 0.75, "JPY": 110.00},
+    "EUR": {"USD": 1.18, "GBP": 0.88, "JPY": 129.40},
+    "GBP": {"USD": 1.33, "EUR": 1.14, "JPY": 146.00},
+    "JPY": {"USD": 0.0091, "EUR": 0.0077, "GBP": 0.0068}
+}
 
 
 class CalculatorGUI:
@@ -76,219 +27,231 @@ class CalculatorGUI:
         self.master = master
         master.title("Calculator")
         master.geometry("400x600")
+        master.resizable(False, False)
+        master.configure(bg="#F0F0F0")
 
-        self.equation = tk.StringVar()
-        self.entry_value = ''
-        self.equation.set('0')
+        self.expression_var = tk.StringVar()
+        self.result_var = tk.StringVar()
+        self.expression_var.set('')
+        self.result_var.set('0')
+        self.angle_mode = "deg"  # default to degrees
 
         self.notebook = ttk.Notebook(master)
-        self.notebook.pack(expand=True, fill="both")
+        self.notebook.pack(expand=True, fill="both", padx=10, pady=10)
 
-        self.general_math_frame = ttk.Frame(self.notebook)
-        self.scientific_frame = ttk.Frame(self.notebook)
-        self.measurement_frame = ttk.Frame(self.notebook)
-        self.price_frame = ttk.Frame(self.notebook)
+        self.general_math_frame = ttk.Frame(self.notebook, style='TFrame')
+        self.scientific_frame = ttk.Frame(self.notebook, style='TFrame')
+        self.measurement_frame = ttk.Frame(self.notebook, style='TFrame')
+        self.price_frame = ttk.Frame(self.notebook, style='TFrame')
 
         self.notebook.add(self.general_math_frame, text="General Math")
         self.notebook.add(self.scientific_frame, text="Scientific")
         self.notebook.add(self.measurement_frame, text="Measurement")
         self.notebook.add(self.price_frame, text="Price")
 
-        self.create_general_math_buttons(self.general_math_frame)
-        self.create_scientific_buttons(self.scientific_frame)
+        # Configure styles
+        style = ttk.Style()
+        style.theme_use('clam')
+        style.configure('TFrame', background='#F0F0F0')
+        style.configure('TButton', font=('Arial', 16), padding=10, relief="flat", background="#E0E0E0", foreground="#333333")
+        style.map('TButton', background=[('active', '#D0D0D0')])
+
+        style.configure('Operator.TButton', background="#ADD8E6", foreground="#FFFFFF")
+        style.map('Operator.TButton', background=[('active', '#87CEEB')])
+
+        style.configure('Equals.TButton', background="#4682B4", foreground="#FFFFFF")
+        style.map('Equals.TButton', background=[('active', '#5F9EA0')])
+
+        style.configure('Clear.TButton', background="#FF6347", foreground="#FFFFFF")
+        style.map('Clear.TButton', background=[('active', '#FF4500')])
+
+        style.configure('Scientific.TButton', background="#D3D3D3", foreground="#333333")
+        style.map('Scientific.TButton', background=[('active', '#C0C0C0')])
+
+        self.create_general_math_ui(self.general_math_frame)
+        self.create_scientific_ui(self.scientific_frame)
         self.create_measurement_conversion_ui(self.measurement_frame)
         self.create_price_conversion_ui(self.price_frame)
 
-        # Configure styles for a modern look
-        style = ttk.Style()
-        style.theme_use('clam') # Use a modern theme
-        style.configure('TButton', font=('Arial', 14), padding=10)
-        style.configure('TLabel', font=('Arial', 12))
-        style.configure('TEntry', font=('Arial', 14), padding=5)
-        style.configure('TCombobox', font=('Arial', 12), padding=5)
-        style.configure('TNotebook.Tab', font=('Arial', 12, 'bold'), padding=[10, 5])
+    # ------------------ General Math ------------------
+    def create_general_math_ui(self, frame):
+        display_frame = tk.Frame(frame, bg="#F0F0F0")
+        display_frame.grid(row=0, column=0, columnspan=4, sticky="nsew", padx=5, pady=5)
 
-        # Display for General Math and Scientific sections
-        self.display = tk.Entry(self.general_math_frame, textvariable=self.equation, font=('Arial', 24), bd=0, justify='right', bg="#CCCCCC")
-        self.display.grid(row=0, column=0, columnspan=4, sticky="nsew")
+        self.expression_label = tk.Label(display_frame, textvariable=self.expression_var, anchor="e", font=('Arial', 16), bg="#F0F0F0", fg="#888888")
+        self.expression_label.pack(expand=True, fill="both")
 
-    def button_click(self, char):
-        if char == '=':
-            try:
-                self.entry_value = str(eval(self.entry_value.replace('^', '**')))
-            except Exception as e:
-                self.entry_value = "Error"
-                messagebox.showerror("Error", e)
-        elif char == 'C':
-            self.entry_value = ''
-        elif char == 'sqrt':
-            try:
-                self.entry_value = str(square_root(float(self.entry_value)))
-            except Exception as e:
-                self.entry_value = "Error"
-                messagebox.showerror("Error", e)
-        elif char == '^':
-            self.entry_value += '**'
-        elif char == 'sin':
-            try:
-                self.entry_value = str(sin_val(float(self.entry_value)))
-            except Exception as e:
-                self.entry_value = "Error"
-                messagebox.showerror("Error", e)
-        elif char == 'cos':
-            try:
-                self.entry_value = str(cos_val(float(self.entry_value)))
-            except Exception as e:
-                self.entry_value = "Error"
-                messagebox.showerror("Error", e)
-        elif char == 'tan':
-            try:
-                self.entry_value = str(tan_val(float(self.entry_value)))
-            except Exception as e:
-                self.entry_value = "Error"
-                messagebox.showerror("Error", e)
-        else:
-            self.entry_value += str(char)
-        self.equation.set(self.entry_value)
+        self.result_label = tk.Label(display_frame, textvariable=self.result_var, anchor="e", font=('Arial', 24, 'bold'), bg="#F0F0F0", fg="#333333")
+        self.result_label.pack(expand=True, fill="both")
 
-    def create_general_math_buttons(self, frame):
         buttons = [
-            '7', '8', '9', '/',
-            '4', '5', '6', '*',
-            '1', '2', '3', '-',
-            'C', '0', '=', '+'
+            {'text': 'Ac', 'style': 'Clear.TButton', 'col': 0, 'row': 1},
+            {'text': '+/-', 'style': 'Scientific.TButton', 'col': 1, 'row': 1},
+            {'text': '%', 'style': 'Scientific.TButton', 'col': 2, 'row': 1},
+            {'text': '/', 'style': 'Operator.TButton', 'col': 3, 'row': 1},
+            {'text': '7', 'style': 'TButton', 'col': 0, 'row': 2},
+            {'text': '8', 'style': 'TButton', 'col': 1, 'row': 2},
+            {'text': '9', 'style': 'TButton', 'col': 2, 'row': 2},
+            {'text': '*', 'style': 'Operator.TButton', 'col': 3, 'row': 2},
+            {'text': '4', 'style': 'TButton', 'col': 0, 'row': 3},
+            {'text': '5', 'style': 'TButton', 'col': 1, 'row': 3},
+            {'text': '6', 'style': 'TButton', 'col': 2, 'row': 3},
+            {'text': '-', 'style': 'Operator.TButton', 'col': 3, 'row': 3},
+            {'text': '1', 'style': 'TButton', 'col': 0, 'row': 4},
+            {'text': '2', 'style': 'TButton', 'col': 1, 'row': 4},
+            {'text': '3', 'style': 'TButton', 'col': 2, 'row': 4},
+            {'text': '+', 'style': 'Operator.TButton', 'col': 3, 'row': 4},
+            {'text': '0', 'style': 'TButton', 'col': 0, 'row': 5, 'columnspan': 2},
+            {'text': '.', 'style': 'TButton', 'col': 2, 'row': 5},
+            {'text': '=', 'style': 'Equals.TButton', 'col': 3, 'row': 5}
         ]
-        row_val = 1 # Start from row 1 to leave space for display
-        col_val = 0
-        for button in buttons:
-            ttk.Button(frame, text=button, command=lambda b=button: self.button_click(b)).grid(row=row_val, column=col_val, sticky="nsew", padx=1, pady=1)
-            col_val += 1
-            if col_val > 3:
-                col_val = 0
-                row_val += 1
-        frame.grid_rowconfigure(0, weight=1)
-        for i in range(1, row_val + 1):
+
+        for button_data in buttons:
+            text = button_data['text']
+            style_name = button_data['style']
+            col = button_data['col']
+            row = button_data['row']
+            columnspan = button_data.get('columnspan', 1)
+            ttk.Button(frame, text=text, style=style_name, command=lambda b=text: self.button_click(b)).grid(row=row, column=col, columnspan=columnspan, sticky="nsew", padx=1, pady=1)
+
+        for i in range(6):
             frame.grid_rowconfigure(i, weight=1)
         for i in range(4):
             frame.grid_columnconfigure(i, weight=1)
 
-    def create_scientific_buttons(self, frame):
-        scientific_buttons = [
-            'sqrt', '^', 'sin', 'cos',
-            'tan', 'C', '='
+    def button_click(self, value):
+        if value == "Ac":
+            self.expression_var.set("")
+            self.result_var.set("0")
+        elif value == "=":
+            try:
+                result = eval(self.expression_var.get())
+                self.result_var.set(str(result))
+                self.expression_var.set(str(result))
+            except Exception:
+                self.result_var.set("Error")
+        elif value == "+/-":
+            try:
+                current = self.expression_var.get()
+                if current.startswith("-"):
+                    self.expression_var.set(current[1:])
+                else:
+                    self.expression_var.set("-" + current)
+            except Exception:
+                self.result_var.set("Error")
+        else:
+            current = self.expression_var.get()
+            self.expression_var.set(current + str(value))
+
+    # ------------------ Scientific ------------------
+    def create_scientific_ui(self, frame):
+        display_frame = tk.Frame(frame, bg="#F0F0F0")
+        display_frame.grid(row=0, column=0, columnspan=5, sticky="nsew", padx=5, pady=5)
+
+        self.scientific_expression_label = tk.Label(display_frame, textvariable=self.expression_var, anchor="e", font=('Arial', 16), bg="#F0F0F0", fg="#888888")
+        self.scientific_expression_label.pack(expand=True, fill="both")
+
+        self.scientific_result_label = tk.Label(display_frame, textvariable=self.result_var, anchor="e", font=('Arial', 24, 'bold'), bg="#F0F0F0", fg="#333333")
+        self.scientific_result_label.pack(expand=True, fill="both")
+
+        scientific_buttons_data = [
+            {'text': 'sin', 'style': 'Scientific.TButton', 'col': 0, 'row': 1},
+            {'text': 'cos', 'style': 'Scientific.TButton', 'col': 1, 'row': 1},
+            {'text': 'tan', 'style': 'Scientific.TButton', 'col': 2, 'row': 1},
+            {'text': 'sqrt', 'style': 'Scientific.TButton', 'col': 3, 'row': 1},
+            {'text': '^', 'style': 'Scientific.TButton', 'col': 4, 'row': 1},
+            {'text': 'pi', 'style': 'Scientific.TButton', 'col': 0, 'row': 2},
+            {'text': 'deg', 'style': 'Scientific.TButton', 'col': 1, 'row': 2},
+            {'text': 'rad', 'style': 'Scientific.TButton', 'col': 2, 'row': 2}
         ]
-        row_val = 1 # Start from row 1 to leave space for display
-        col_val = 0
-        for button in scientific_buttons:
-            ttk.Button(frame, text=button, command=lambda b=button: self.button_click(b)).grid(row=row_val, column=col_val, sticky="nsew", padx=1, pady=1)
-            col_val += 1
-            if col_val > 3:
-                col_val = 0
-                row_val += 1
-        frame.grid_rowconfigure(0, weight=1)
-        for i in range(1, row_val + 1):
+
+        for button_data in scientific_buttons_data:
+            text = button_data['text']
+            style_name = button_data['style']
+            col = button_data['col']
+            row = button_data['row']
+            columnspan = button_data.get('columnspan', 1)
+
+            if text in ['deg', 'rad']:
+                ttk.Button(frame, text=text, style=style_name, command=lambda m=text: self.toggle_angle_mode(m)).grid(row=row, column=col, columnspan=columnspan, sticky="nsew", padx=1, pady=1)
+            else:
+                ttk.Button(frame, text=text, style=style_name, command=lambda b=text: self.button_click(b)).grid(row=row, column=col, columnspan=columnspan, sticky="nsew", padx=1, pady=1)
+
+        for i in range(3):
             frame.grid_rowconfigure(i, weight=1)
-        for i in range(4):
+        for i in range(5):
             frame.grid_columnconfigure(i, weight=1)
 
-        # Add a display for the scientific section
-        self.scientific_display = tk.Entry(self.scientific_frame, textvariable=self.equation, font=('Arial', 24), bd=0, justify='right', bg="#CCCCCC")
-        self.scientific_display.grid(row=0, column=0, columnspan=4, sticky="nsew")
+    def toggle_angle_mode(self, mode):
+        self.angle_mode = mode
+        self.result_var.set(f"Mode: {mode}")
 
+    # ------------------ Measurement Conversion ------------------
     def create_measurement_conversion_ui(self, frame):
-        self.measurement_input = tk.StringVar()
-        self.measurement_output = tk.StringVar()
-        self.measurement_input.set('0')
-        self.measurement_output.set('0')
+        self.measurement_input_var = tk.StringVar()
+        self.from_unit = tk.StringVar(value="meters")
+        self.to_unit = tk.StringVar(value="feet")
 
-        tk.Label(frame, text="Value:").grid(row=0, column=0, padx=5, pady=5)
-        tk.Entry(frame, textvariable=self.measurement_input, width=15).grid(row=0, column=1, padx=5, pady=5)
+        tk.Entry(frame, textvariable=self.measurement_input_var, font=('Arial', 14)).pack(pady=10)
+        ttk.Combobox(frame, textvariable=self.from_unit, values=list(CONVERSION_FACTORS.keys())).pack(pady=5)
+        ttk.Combobox(frame, textvariable=self.to_unit, values=list(CONVERSION_FACTORS.keys())).pack(pady=5)
 
-        self.from_unit = ttk.Combobox(frame, values=["Meters", "Feet", "Kilograms", "Pounds", "Celsius", "Fahrenheit"])
-        self.from_unit.grid(row=1, column=0, padx=5, pady=5)
-        self.from_unit.set("Meters")
-
-        self.to_unit = ttk.Combobox(frame, values=["Meters", "Feet", "Kilograms", "Pounds", "Celsius", "Fahrenheit"])
-        self.to_unit.grid(row=1, column=1, padx=5, pady=5)
-        self.to_unit.set("Feet")
-
-        tk.Button(frame, text="Convert", command=self.perform_measurement_conversion).grid(row=2, column=0, columnspan=2, pady=10)
-
-        tk.Label(frame, text="Result:").grid(row=3, column=0, padx=5, pady=5)
-        tk.Entry(frame, textvariable=self.measurement_output, width=15, state='readonly').grid(row=3, column=1, padx=5, pady=5)
+        tk.Button(frame, text="Convert", command=self.perform_measurement_conversion).pack(pady=10)
+        self.measurement_result = tk.Label(frame, text="", font=('Arial', 16))
+        self.measurement_result.pack(pady=5)
 
     def perform_measurement_conversion(self):
         try:
-            value = float(self.measurement_input.get())
+            value = float(self.measurement_input_var.get())
             from_unit = self.from_unit.get()
             to_unit = self.to_unit.get()
-            result = 0
 
-            if from_unit == "Meters" and to_unit == "Feet":
-                result = meters_to_feet(value)
-            elif from_unit == "Feet" and to_unit == "Meters":
-                result = feet_to_meters(value)
-            elif from_unit == "Kilograms" and to_unit == "Pounds":
-                result = kilograms_to_pounds(value)
-            elif from_unit == "Pounds" and to_unit == "Kilograms":
-                result = pounds_to_kilograms(value)
-            elif from_unit == "Celsius" and to_unit == "Fahrenheit":
-                result = celsius_to_fahrenheit(value)
-            elif from_unit == "Fahrenheit" and to_unit == "Celsius":
-                result = fahrenheit_to_celsius(value)
-            elif from_unit == to_unit:
-                result = value
+            if from_unit == to_unit:
+                converted_value = value
+            elif from_unit in CONVERSION_FACTORS and to_unit in CONVERSION_FACTORS[from_unit]:
+                factor = CONVERSION_FACTORS[from_unit][to_unit]
+                converted_value = factor(value) if callable(factor) else value * factor
             else:
-                messagebox.showerror("Error", "Unsupported conversion.")
-                return
+                converted_value = "Error"
 
-            self.measurement_output.set(str(round(result, 4)))
-        except ValueError:
-            messagebox.showerror("Error", "Invalid input. Please enter a numeric value.")
-        except Exception as e:
-            messagebox.showerror("Error", e)
+            self.measurement_result.config(text=f"{converted_value}")
+        except Exception:
+            self.measurement_result.config(text="Invalid Input")
 
+    # ------------------ Price Conversion ------------------
     def create_price_conversion_ui(self, frame):
-        self.price_input = tk.StringVar()
-        self.price_output = tk.StringVar()
-        self.price_input.set('0')
-        self.price_output.set('0')
+        self.price_input_var = tk.StringVar()
+        self.from_currency = tk.StringVar(value="USD")
+        self.to_currency = tk.StringVar(value="EUR")
 
-        tk.Label(frame, text="Amount:").grid(row=0, column=0, padx=5, pady=5)
-        tk.Entry(frame, textvariable=self.price_input, width=15).grid(row=0, column=1, padx=5, pady=5)
+        tk.Entry(frame, textvariable=self.price_input_var, font=('Arial', 14)).pack(pady=10)
+        ttk.Combobox(frame, textvariable=self.from_currency, values=list(EXCHANGE_RATES.keys())).pack(pady=5)
+        ttk.Combobox(frame, textvariable=self.to_currency, values=list(EXCHANGE_RATES.keys())).pack(pady=5)
 
-        self.from_currency = ttk.Combobox(frame, values=["USD", "EUR", "GBP"])
-        self.from_currency.grid(row=1, column=0, padx=5, pady=5)
-        self.from_currency.set("USD")
-
-        self.to_currency = ttk.Combobox(frame, values=["USD", "EUR", "GBP"])
-        self.to_currency.grid(row=1, column=1, padx=5, pady=5)
-        self.to_currency.set("EUR")
-
-        tk.Button(frame, text="Convert", command=self.perform_price_conversion).grid(row=2, column=0, columnspan=2, pady=10)
-
-        tk.Label(frame, text="Result:").grid(row=3, column=0, padx=5, pady=5)
-        tk.Entry(frame, textvariable=self.price_output, width=15, state='readonly').grid(row=3, column=1, padx=5, pady=5)
+        tk.Button(frame, text="Convert", command=self.perform_price_conversion).pack(pady=10)
+        self.price_result = tk.Label(frame, text="", font=('Arial', 16))
+        self.price_result.pack(pady=5)
 
     def perform_price_conversion(self):
         try:
-            amount = float(self.price_input.get())
+            amount = float(self.price_input_var.get())
             from_currency = self.from_currency.get()
             to_currency = self.to_currency.get()
 
             if from_currency == to_currency:
-                result = amount
+                converted_amount = amount
+            elif from_currency in EXCHANGE_RATES and to_currency in EXCHANGE_RATES[from_currency]:
+                rate = EXCHANGE_RATES[from_currency][to_currency]
+                converted_amount = amount * rate
             else:
-                result = convert_currency(amount, from_currency, to_currency)
+                converted_amount = "Error"
 
-            self.price_output.set(str(round(result, 2)))
-        except ValueError as e:
-            messagebox.showerror("Error", f"Invalid input: {e}")
-        except Exception as e:
-            messagebox.showerror("Error", e)
+            self.price_result.config(text=f"{converted_amount}")
+        except Exception:
+            self.price_result.config(text="Invalid Input")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     root = tk.Tk()
     my_calculator = CalculatorGUI(root)
     root.mainloop()
